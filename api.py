@@ -86,7 +86,6 @@ def fetch_verification_link(email):
                                   headers={"X-Api-Key": SONJJ_API_KEY}, timeout=10)
                 if r2.status_code == 200:
                     body = r2.json().get("body", "")
-                    # Prioritize click links / confirm tokens (exclude open tracking pixel /tr/op/)
                     href_links = re.findall(r'href=[\'"]?([^\'" >]+)', body)
                     for l in href_links:
                         if "/tr/cl/" in l or "confirm?token=" in l:
@@ -122,7 +121,6 @@ async def register_account():
             await browser.close()
             raise Exception("Failed to receive verification email from Kiri TTS")
 
-        # Navigate to confirm link in browser so Next.js executes confirmation
         await page.goto(link, wait_until="networkidle")
         await asyncio.sleep(3)
         await browser.close()
@@ -163,11 +161,25 @@ async def synthesize_speech(text: str, account: dict):
         # Input Khmer text
         editor = page.locator('textarea[placeholder*="Type or paste your text here"]').first
         await editor.wait_for(state="attached", timeout=15000)
+        await editor.click()
         await editor.fill(text)
+        await editor.dispatch_event('input')
+        await editor.dispatch_event('change')
 
         # Click Generate Speech
         gen_btn = page.locator('button:has-text("Generate Speech")')
         await gen_btn.wait_for(state="visible", timeout=10000)
+        
+        # Ensure React synthetic form enables the generate button
+        for _ in range(6):
+            if await gen_btn.is_disabled():
+                await editor.press("End")
+                await editor.press("Space")
+                await editor.press("Backspace")
+                await asyncio.sleep(0.5)
+            else:
+                break
+
         await gen_btn.click()
 
         # Wait for audio render
@@ -307,4 +319,5 @@ async def create_new_account():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
