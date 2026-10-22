@@ -66,6 +66,30 @@ document.querySelectorAll('.chip-btn').forEach(btn => {
   });
 });
 
+// Tag / Tone insertion buttons (Pauses & Emotions)
+document.querySelectorAll('.tag-insert-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tag = btn.getAttribute('data-tag');
+    const start = khmerInput.selectionStart || khmerInput.value.length;
+    const end = khmerInput.selectionEnd || khmerInput.value.length;
+    const text = khmerInput.value;
+    khmerInput.value = text.substring(0, start) + tag + text.substring(end);
+    khmerInput.selectionStart = khmerInput.selectionEnd = start + tag.length;
+    updateStats();
+    khmerInput.focus();
+  });
+});
+
+// Playback Speed buttons
+document.querySelectorAll('.btn-speed').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const speed = parseFloat(btn.getAttribute('data-speed'));
+    audioEl.playbackRate = speed;
+    document.querySelectorAll('.btn-speed').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
 // Check health / server status with smart auto-fallback
 async function checkServer() {
   const currentUrl = serverSelect.value;
