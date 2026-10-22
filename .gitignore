@@ -23,3 +23,5 @@ kiri_stealth_outputs/
 # OS generated
 .DS_Store
 Thumbs.db
+node_modules/
+electron-app/node_modules/

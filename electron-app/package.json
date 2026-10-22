@@ -1,0 +1,16 @@
+{
+  "name": "kiri-tts-desktop",
+  "version": "1.0.0",
+  "description": "Kiri TTS Khmer Voice Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": ["khmer", "tts", "kiri", "speech", "electron"],
+  "author": "Sophearith Assistant",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^33.2.1"
+  }
+}
