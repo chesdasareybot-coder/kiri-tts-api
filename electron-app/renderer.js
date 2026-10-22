@@ -285,6 +285,9 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// Initial check on startup
+// Initial check on startup with fast retry intervals
 checkServer();
+setTimeout(checkServer, 1500);
+setTimeout(checkServer, 3000);
+setTimeout(checkServer, 5000);
 setInterval(checkServer, 10000);

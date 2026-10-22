@@ -33,14 +33,49 @@ function checkLocalServer() {
 }
 
 function startPythonBackend() {
+  // Check candidate locations for bundled backend executable
+  const searchPaths = [
+    path.join(process.resourcesPath || '', 'backend', 'kiri-server.exe'),
+    path.join(path.dirname(process.execPath), 'resources', 'backend', 'kiri-server.exe'),
+    path.join(path.dirname(process.execPath), 'backend', 'kiri-server.exe'),
+    path.join(__dirname, 'resources', 'backend', 'kiri-server.exe'),
+    path.join(__dirname, '..', 'dist', 'kiri-server', 'kiri-server.exe')
+  ];
+
+  let serverExe = null;
+  let backendDir = null;
+
+  for (const candidate of searchPaths) {
+    if (fs.existsSync(candidate)) {
+      serverExe = candidate;
+      backendDir = path.dirname(candidate);
+      break;
+    }
+  }
+
+  if (serverExe) {
+    console.log('Launching bundled kiri-server.exe from:', serverExe);
+    pythonProcess = spawn(serverExe, [], {
+      cwd: backendDir,
+      windowsHide: true,
+      stdio: 'ignore'
+    });
+
+    pythonProcess.on('error', (err) => {
+      console.error('Failed to run bundled kiri-server:', err);
+    });
+    return;
+  }
+
+  // Fallback to system python if standalone binary is not found
   const rootDir = path.join(__dirname, '..');
   const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
   
-  console.log('Starting Python backend process...');
+  console.log('Starting Python backend via system python...');
   pythonProcess = spawn(pythonCmd, ['-m', 'uvicorn', 'api:app', '--host', '0.0.0.0', '--port', '8000'], {
     cwd: rootDir,
-    stdio: 'ignore',
-    detached: false
+    windowsHide: true,
+    stdio: 'ignore'
   });
 
   pythonProcess.on('error', (err) => {
@@ -133,9 +168,14 @@ ipcMain.on('window-close', () => {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  if (pythonProcess) {
+  if (pythonProcess && pythonProcess.pid) {
     try {
-      pythonProcess.kill();
+      if (process.platform === 'win32') {
+        const { execSync } = require('child_process');
+        execSync(`taskkill /pid ${pythonProcess.pid} /T /F`, { stdio: 'ignore' });
+      } else {
+        pythonProcess.kill();
+      }
     } catch {}
   }
   if (process.platform !== 'darwin') {

@@ -28,6 +28,15 @@
       ],
       "artifactName": "KiriTTS-KhmerVoice-${version}.${ext}"
     },
+    "extraResources": [
+      {
+        "from": "resources/backend",
+        "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "files": [
       "main.js",
       "preload.js",
