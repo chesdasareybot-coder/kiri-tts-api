@@ -148,27 +148,26 @@ async def synthesize_speech(text: str, account: dict):
 
         await asyncio.sleep(2)
 
-        # Dismiss any tour/survey popups
+        # Press Escape and dismiss any modal dialogs (surveys, onboarding, tours)
+        await page.keyboard.press("Escape")
         try:
-            later = page.locator('button:has-text("Later")')
-            if await later.count() > 0: await later.first.click(timeout=1500)
+            for btn_text in ["Later", "Skip all", "Skip"]:
+                btn = page.locator(f'button:has-text("{btn_text}")')
+                if await btn.count() > 0:
+                    await btn.first.click(timeout=1000)
         except: pass
-        try:
-            skip = page.locator('button:has-text("Skip all")')
-            if await skip.count() > 0: await skip.first.click(timeout=1500)
-        except: pass
+        await page.keyboard.press("Escape")
 
-        # Input Khmer text
+        # Input Khmer text with force=True
         editor = page.locator('textarea[placeholder*="Type or paste your text here"]').first
         await editor.wait_for(state="attached", timeout=15000)
-        await editor.click()
-        await editor.fill(text)
+        await editor.fill(text, force=True)
         await editor.dispatch_event('input')
         await editor.dispatch_event('change')
 
-        # Click Generate Speech
+        # Locate Generate Speech button
         gen_btn = page.locator('button:has-text("Generate Speech")')
-        await gen_btn.wait_for(state="visible", timeout=10000)
+        await gen_btn.wait_for(state="attached", timeout=10000)
         
         # Ensure React synthetic form enables the generate button
         for _ in range(6):
@@ -180,7 +179,7 @@ async def synthesize_speech(text: str, account: dict):
             else:
                 break
 
-        await gen_btn.click()
+        await gen_btn.click(force=True)
 
         # Wait for audio render
         try:
