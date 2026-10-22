@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  kiri-tts-api:
+    build: .
+    container_name: kiri_tts_api
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./kiri_audio_outputs:/app/kiri_audio_outputs
+      - ./accounts.txt:/app/accounts.txt
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONIOENCODING=utf-8

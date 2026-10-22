@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment and virtualenvs
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Temporary files and logs
+*.log
+.system_generated/
+.tempmediaStorage/
+kiri_session.json
+
+# Audio cache (ignore large raw files, keep folder)
+kiri_audio_outputs/*.wav
+kiri_stealth_outputs/
+
+# OS generated
+.DS_Store
+Thumbs.db
