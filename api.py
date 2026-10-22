@@ -147,7 +147,8 @@ async def synthesize_speech(text: str, account: dict):
         page = await context.new_page()
 
         # Login
-        await page.goto("https://www.kiritts.com/auth/login?locale=en", wait_until="networkidle")
+        await page.goto("https://www.kiritts.com/auth/login?locale=en", wait_until="domcontentloaded")
+        await page.locator("#email").wait_for(state="visible", timeout=15000)
         await page.locator("#email").fill(account["email"])
         await page.locator("#password").fill(account["password"])
         await page.locator("#password").press("Enter")
