@@ -16,8 +16,8 @@ ENV/
 .tempmediaStorage/
 kiri_session.json
 
-# Audio cache (ignore large raw files, keep folder)
-kiri_audio_outputs/*.wav
+# Audio cache (ignore outputs)
+kiri_audio_outputs/
 kiri_stealth_outputs/
 
 # OS generated

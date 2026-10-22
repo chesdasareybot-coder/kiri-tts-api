@@ -146,7 +146,20 @@ async def synthesize_speech(text: str, account: dict):
         context = await browser.new_context()
         page = await context.new_page()
 
-        # Login
+        # Listen to upstream API responses for early error detection
+        upstream_error = None
+        async def on_response(res):
+            nonlocal upstream_error
+            url = res.url
+            if "generate-speech" in url and res.status >= 400:
+                if res.status == 502:
+                    upstream_error = "Kiri TTS server is currently experiencing a temporary 502 Bad Gateway (upstream overloaded). Please retry in 1-2 minutes."
+                else:
+                    upstream_error = f"Kiri TTS generate-speech returned HTTP {res.status}"
+
+        page.on("response", on_response)
+
+        # Step 1: Login
         await page.goto("https://www.kiritts.com/auth/login?locale=en", wait_until="domcontentloaded")
         await page.locator("#email").wait_for(state="visible", timeout=15000)
         await page.locator("#email").fill(account["email"])
@@ -160,29 +173,51 @@ async def synthesize_speech(text: str, account: dict):
 
         await asyncio.sleep(2)
 
-        # Press Escape and dismiss any modal dialogs (surveys, onboarding, tours)
-        await page.keyboard.press("Escape")
+        # Step 2: Handle Survey Dialog (Where did you hear about us?)
         try:
-            for btn_text in ["Later", "Skip all", "Skip"]:
-                btn = page.locator(f'button:has-text("{btn_text}")')
-                if await btn.count() > 0:
-                    await btn.first.click(timeout=1000)
-        except: pass
-        await page.keyboard.press("Escape")
+            dialog = page.locator('div[role="dialog"]')
+            if await dialog.count() > 0:
+                later = dialog.locator('button:has-text("Later"), button:has-text("Close"), button:has-text("Skip")')
+                if await later.count() > 0:
+                    await later.first.click(force=True)
+                    await asyncio.sleep(1)
+        except Exception:
+            pass
 
-        # Input Khmer text with force=True
+        # Step 3: Handle Onboarding Tour (Skip all)
+        try:
+            skip_all = page.locator('button:has-text("Skip all"), button:has-text("Skip")')
+            if await skip_all.count() > 0:
+                await skip_all.first.click(force=True)
+                await asyncio.sleep(0.5)
+        except Exception:
+            pass
+
+        # Step 4: Fill Khmer text in editor
         editor = page.locator('textarea[placeholder*="Type or paste your text here"]').first
         await editor.wait_for(state="attached", timeout=15000)
         await editor.fill(text, force=True)
         await editor.dispatch_event('input')
         await editor.dispatch_event('change')
+        await editor.press("End")
+        await editor.press("Space")
+        await editor.press("Backspace")
+        await asyncio.sleep(0.5)
 
-        # Locate Generate Speech button
+        # Check again if tour popup appeared after focusing editor
+        try:
+            skip_again = page.locator('button:has-text("Skip all")')
+            if await skip_again.count() > 0:
+                await skip_again.first.click(force=True)
+                await asyncio.sleep(0.5)
+        except Exception:
+            pass
+
+        # Step 5: Locate and trigger Generate Speech
         gen_btn = page.locator('button:has-text("Generate Speech")')
         await gen_btn.wait_for(state="attached", timeout=10000)
-        
-        # Ensure React synthetic form enables the generate button
-        for _ in range(6):
+
+        for _ in range(5):
             if await gen_btn.is_disabled():
                 await editor.press("End")
                 await editor.press("Space")
@@ -193,27 +228,35 @@ async def synthesize_speech(text: str, account: dict):
 
         await gen_btn.click(force=True)
 
-        # Wait for audio render
-        try:
-            await page.wait_for_selector('audio[src]', state="attached", timeout=60000)
-        except Exception as e:
-            page_text = await page.inner_text("body")
-            if "credit" in page_text.lower() or "limit" in page_text.lower() or "upgrade" in page_text.lower():
-                await browser.close()
-                raise Exception("OUT_OF_CREDITS")
-            await browser.close()
-            raise e
-
+        # Step 6: Wait for audio generation or detect upstream errors immediately
         audio_src = ""
-        for _ in range(30):
-            audio_src = await page.get_attribute('audio', 'src')
-            if audio_src and len(audio_src) > 5:
-                break
+        for i in range(75):
+            if upstream_error:
+                await browser.close()
+                raise Exception(upstream_error)
+
+            audio = page.locator("audio[src]")
+            if await audio.count() > 0:
+                src = await audio.first.get_attribute("src")
+                if src and len(src) > 5:
+                    audio_src = src
+                    break
+
+            # Check for credit limit notices
+            if i > 5 and i % 5 == 0:
+                page_text = await page.inner_text("body")
+                if any(w in page_text.lower() for w in ["credit", "limit reached", "upgrade plan"]):
+                    await browser.close()
+                    raise Exception("OUT_OF_CREDITS")
+
             await asyncio.sleep(1)
 
         if not audio_src:
+            if upstream_error:
+                await browser.close()
+                raise Exception(upstream_error)
             await browser.close()
-            raise Exception("Speech rendered but audio source was missing")
+            raise Exception("Speech generation timed out waiting for audio from Kiri TTS")
 
         # Fetch binary stream inside authenticated browser session
         audio_bytes = await page.evaluate('''async (url) => {
@@ -270,18 +313,32 @@ async def generate_tts(req: TTSRequest):
         raise HTTPException(status_code=400, detail="Text parameter cannot be empty.")
 
     accounts = load_accounts()
+    data = None
     current_acc = accounts[0]
+    last_error = ""
 
-    try:
-        data = await synthesize_speech(req.text, current_acc)
-    except Exception as e:
-        if "OUT_OF_CREDITS" in str(e) and req.auto_rotate:
-            print("Credit exhausted. Auto-registering new account...")
+    for acc in accounts:
+        try:
+            current_acc = acc
+            data = await synthesize_speech(req.text, acc)
+            break
+        except Exception as e:
+            last_error = str(e)
+            print(f"Account {acc['email']} error: {e}", flush=True)
+            if "502" in last_error or "Bad Gateway" in last_error:
+                break
+
+    if not data and req.auto_rotate and ("OUT_OF_CREDITS" in last_error or "limit" in last_error.lower()):
+        print("Auto-registering new account due to credit limit...", flush=True)
+        try:
             new_acc = await register_account()
-            data = await synthesize_speech(req.text, new_acc)
             current_acc = new_acc
-        else:
-            raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+            data = await synthesize_speech(req.text, new_acc)
+        except Exception as reg_err:
+            last_error = str(reg_err)
+
+    if not data:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {last_error}")
 
     timestamp = int(time.time())
     wav_filename = f"kiri_{timestamp}.wav"
