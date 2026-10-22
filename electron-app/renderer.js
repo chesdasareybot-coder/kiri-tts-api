@@ -66,20 +66,35 @@ document.querySelectorAll('.chip-btn').forEach(btn => {
   });
 });
 
-// Check health / server status
+// Check health / server status with smart auto-fallback
 async function checkServer() {
-  const baseUrl = serverSelect.value;
+  const currentUrl = serverSelect.value;
   try {
-    const res = await fetch(`${baseUrl}/health`, { method: 'GET' });
+    const res = await fetch(`${currentUrl}/health`, { method: 'GET' });
     if (res.ok) {
       statusDot.className = 'status-dot online';
       loadAccountInfo();
-    } else {
-      statusDot.className = 'status-dot error';
+      return true;
     }
-  } catch (e) {
-    statusDot.className = 'status-dot error';
-  }
+  } catch (e) {}
+
+  // If selected server failed, check alternate server automatically
+  const altUrl = currentUrl.includes('localhost') 
+    ? 'https://kiri-tts-api.onrender.com' 
+    : 'http://localhost:8000';
+
+  try {
+    const altRes = await fetch(`${altUrl}/health`, { method: 'GET' });
+    if (altRes.ok) {
+      serverSelect.value = altUrl;
+      statusDot.className = 'status-dot online';
+      loadAccountInfo();
+      return true;
+    }
+  } catch (e) {}
+
+  statusDot.className = 'status-dot error';
+  return false;
 }
 
 async function loadAccountInfo() {
