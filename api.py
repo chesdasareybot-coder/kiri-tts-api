@@ -233,9 +233,21 @@ class TTSRequest(BaseModel):
     stream: bool = Field(default=False, description="If true, returns raw audio stream. If false, returns JSON with download URL.")
     auto_rotate: bool = Field(default=True, description="Automatically register new account if current runs out of credit.")
 
+INDEX_HTML = os.path.join(BASE_DIR, "index.html")
+
 # --- API Endpoints ---
-@app.get("/", tags=["Info"])
+@app.get("/", tags=["Web App"])
 def root():
+    if os.path.exists(INDEX_HTML):
+        return FileResponse(INDEX_HTML, media_type="text/html")
+    return {
+        "service": "Kiri TTS Khmer Voice REST API",
+        "status": "online",
+        "docs_url": "/docs"
+    }
+
+@app.get("/api/info", tags=["Info"])
+def api_info():
     return {
         "service": "Kiri TTS Khmer Voice REST API",
         "status": "online",

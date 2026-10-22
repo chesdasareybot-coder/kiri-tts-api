@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiri Khmer TTS - បំប្លែងអត្ថបទទៅជាសំឡេង</title>
+  <meta name="description" content="កម្មវិធីបំប្លែងអត្ថបទខ្មែរទៅជាសំឡេងធម្មជាតិ (Khmer Text to Speech) ងាយស្រួលប្រើប្រាស់ និងទាញយកជា MP3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B0F19;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary-cyan: #06B6D4;
+      --primary-indigo: #6366F1;
+      --primary-purple: #8B5CF6;
+      --text-main: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --success-green: #10B981;
+      --danger-red: #EF4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
+      color: var(--text-main);
+      font-family: 'Kantumruy Pro', 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #A5B4FC;
+      margin-bottom: 1rem;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--primary-cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--primary-cyan);
+      animation: pulse 2s infinite;
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 50%, #A5B4FC 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      font-weight: 400;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 1.25rem;
+      padding: 1.75rem;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      margin-bottom: 1.5rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .card:focus-within {
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    /* Textarea Area */
+    .input-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .input-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #E2E8F0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .char-count {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      max-height: 320px;
+      background: rgba(11, 15, 25, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.85rem;
+      padding: 1rem 1.15rem;
+      color: #FFFFFF;
+      font-family: 'Kantumruy Pro', sans-serif;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      resize: vertical;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    textarea:focus {
+      border-color: var(--primary-cyan);
+      box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.15);
+    }
+
+    textarea::placeholder {
+      color: #64748B;
+    }
+
+    /* Samples chips */
+    .samples-container {
+      margin-top: 0.85rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .samples-label {
+      font-size: 0.8rem;
+      color: #64748B;
+      font-weight: 500;
+    }
+
+    .sample-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94A3B8;
+      font-size: 0.82rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Kantumruy Pro', sans-serif;
+    }
+
+    .sample-chip:hover {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: #E2E8F0;
+    }
+
+    /* Action bar */
+    .action-bar {
+      margin-top: 1.25rem;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-clear {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      padding: 0.75rem 1.2rem;
+      border-radius: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-clear:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #F8FAFC;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-indigo) 0%, var(--primary-cyan) 100%);
+      color: #FFFFFF;
+      border: none;
+      padding: 0.8rem 1.8rem;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.5);
+      filter: brightness(1.1);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      filter: grayscale(0.5);
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.9); }
+    }
+
+    /* Result Player Section */
+    .result-section {
+      display: none;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .result-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #10B981;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .audio-player-box {
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    audio {
+      width: 100%;
+      height: 48px;
+      border-radius: 0.5rem;
+      outline: none;
+    }
+
+    .download-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .file-meta {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .btn-download {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: #FFFFFF;
+      text-decoration: none;
+      padding: 0.65rem 1.4rem;
+      border-radius: 0.65rem;
+      font-size: 0.92rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+      filter: brightness(1.08);
+    }
+
+    .btn-copy-link {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #E2E8F0;
+      padding: 0.65rem 1rem;
+      border-radius: 0.65rem;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-copy-link:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Error Message */
+    .error-box {
+      display: none;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #FCA5A5;
+      padding: 0.9rem 1.2rem;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      color: #64748B;
+      font-size: 0.85rem;
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    footer a {
+      color: var(--primary-cyan);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        <span>Kiri TTS REST API • Online</span>
+      </div>
+      <h1>បំប្លែងអក្សរខ្មែរទៅជាសំឡេង</h1>
+      <p class="subtitle">គ្រាន់តែបិទភ្ជាប់អត្ថបទ (Paste Text) រួចទាញយកឯកសារ MP3 ភ្លាមៗ</p>
+    </header>
+
+    <!-- Main Card -->
+    <div class="card">
+      <div class="input-header">
+        <label for="textInput" class="input-label">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          បញ្ចូលអត្ថបទខ្មែរនៅទីនេះ៖
+        </label>
+        <span id="charCount" class="char-count">0 តួអក្សរ</span>
+      </div>
+
+      <textarea id="textInput" placeholder="សូមសរសេរ ឬបិទភ្ជាប់ (Paste) អត្ថបទភាសាខ្មែរនៅទីនេះ..."></textarea>
+
+      <!-- Sample Chips -->
+      <div class="samples-container">
+        <span class="samples-label">ឧទាហរណ៍សាកល្បង៖</span>
+        <button class="sample-chip" onclick="setSample('សួស្តីបងប្អូនទាំងអស់គ្នា សូមស្វាគមន៍មកកាន់ប្រព័ន្ធសំឡេងឆ្លាតវៃ')">សួស្តីបងប្អូនទាំងអស់គ្នា</button>
+        <button class="sample-chip" onclick="setSample('ថៃដាក់វិធានការប្រាំមួយចំណុច សាកល្បងភាពស្មោះត្រង់របស់កម្ពុជា')">ព័ត៌មានជាតិ</button>
+        <button class="sample-chip" onclick="setSample('ប្រទេសកម្ពុជាសម្បូរទៅដោយសម្បត្តិវប្បធម៌ និងប្រាសាទបុរាណជាច្រើន')">វប្បធម៌ខ្មែរ</button>
+      </div>
+
+      <!-- Error Message Box -->
+      <div id="errorBox" class="error-box"></div>
+
+      <!-- Action Buttons -->
+      <div class="action-bar">
+        <button type="button" class="btn-clear" onclick="clearText()">សម្អាត (Clear)</button>
+        <button type="button" id="generateBtn" class="btn-primary" onclick="generateSpeech()">
+          <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <span id="btnText">បង្កើតសំឡេង (Generate MP3)</span>
+        </button>
+      </div>
+
+      <!-- Result Audio Player Section -->
+      <div id="resultSection" class="result-section">
+        <div class="result-header">
+          <div class="result-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            សំឡេងត្រូវបានបង្កើតជោគជ័យ!
+          </div>
+        </div>
+
+        <div class="audio-player-box">
+          <audio id="audioElement" controls preload="auto"></audio>
+
+          <div class="download-row">
+            <span id="fileMeta" class="file-meta">ទំហំឯកសារ: -- KB</span>
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" class="btn-copy-link" onclick="copyAudioLink()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span id="copyBtnText">ចម្លង Link</span>
+              </button>
+              <a id="downloadLink" href="#" class="btn-download" download="khmer_speech.mp3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                ទាញយកឯកសារ MP3
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <span>ដំណើរការដោយ Kiri TTS Cloud Engine • Playwright Automation</span>
+      <span>API Documentation & Developers: <a href="/docs" target="_blank">Swagger UI (/docs)</a></span>
+    </footer>
+  </div>
+
+  <script>
+    const textInput = document.getElementById('textInput');
+    const charCount = document.getElementById('charCount');
+    const generateBtn = document.getElementById('generateBtn');
+    const btnText = document.getElementById('btnText');
+    const errorBox = document.getElementById('errorBox');
+    const resultSection = document.getElementById('resultSection');
+    const audioElement = document.getElementById('audioElement');
+    const downloadLink = document.getElementById('downloadLink');
+    const fileMeta = document.getElementById('fileMeta');
+    const copyBtnText = document.getElementById('copyBtnText');
+
+    let currentAudioUrl = '';
+
+    // Update char counter
+    textInput.addEventListener('input', () => {
+      charCount.textContent = `${textInput.value.length} តួអក្សរ`;
+    });
+
+    function setSample(text) {
+      textInput.value = text;
+      textInput.dispatchEvent(new Event('input'));
+      textInput.focus();
+    }
+
+    function clearText() {
+      textInput.value = '';
+      textInput.dispatchEvent(new Event('input'));
+      errorBox.style.display = 'none';
+      resultSection.style.display = 'none';
+      audioElement.pause();
+    }
+
+    async function generateSpeech() {
+      const text = textInput.value.trim();
+      if (!text) {
+        showError('សូមបញ្ចូលអត្ថបទខ្មែរជាមុនសិន!');
+        textInput.focus();
+        return;
+      }
+
+      // Reset states
+      errorBox.style.display = 'none';
+      resultSection.style.display = 'none';
+      generateBtn.disabled = true;
+
+      // Loading state
+      let seconds = 0;
+      btnText.innerHTML = `កំពុងបំប្លែងសំឡេង... (<span id="timerSpan">0</span>s)`;
+      const micIcon = document.getElementById('micIcon');
+      micIcon.style.display = 'none';
+
+      const spinner = document.createElement('div');
+      spinner.className = 'spinner';
+      spinner.id = 'activeSpinner';
+      generateBtn.prepend(spinner);
+
+      const timerInterval = setInterval(() => {
+        seconds++;
+        const timerSpan = document.getElementById('timerSpan');
+        if (timerSpan) timerSpan.textContent = seconds;
+      }, 1000);
+
+      try {
+        const response = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: text,
+            format: 'mp3',
+            stream: false
+          })
+        });
+
+        clearInterval(timerInterval);
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.detail || 'មានបញ្ហាក្នុងការបង្កើតសំឡេង សូមព្យាយាមម្តងទៀត');
+        }
+
+        const data = await response.json();
+        if (data.status === 'success' && data.download_url) {
+          currentAudioUrl = data.download_url;
+          audioElement.src = currentAudioUrl;
+          downloadLink.href = currentAudioUrl;
+          downloadLink.download = data.filename || 'khmer_speech.mp3';
+          
+          const kbSize = data.size_bytes ? (data.size_bytes / 1024).toFixed(1) : '32';
+          fileMeta.textContent = `ទំហំឯកសារ: ${kbSize} KB • MP3 128kbps`;
+
+          resultSection.style.display = 'block';
+          audioElement.play().catch(() => {});
+          resultSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          throw new Error(data.detail || 'មិនអាចទាញយកសំឡេងបានទេ');
+        }
+      } catch (err) {
+        clearInterval(timerInterval);
+        showError(err.message || 'បរាជ័យក្នុងការតភ្ជាប់ទៅ Server');
+      } finally {
+        generateBtn.disabled = false;
+        btnText.textContent = 'បង្កើតសំឡេង (Generate MP3)';
+        micIcon.style.display = 'inline-block';
+        const sp = document.getElementById('activeSpinner');
+        if (sp) sp.remove();
+      }
+    }
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = 'block';
+    }
+
+    function copyAudioLink() {
+      if (!currentAudioUrl) return;
+      const fullUrl = window.location.origin + currentAudioUrl;
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        copyBtnText.textContent = 'ចម្លងរួចរាល់! ✓';
+        setTimeout(() => { copyBtnText.textContent = 'ចម្លង Link'; }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
