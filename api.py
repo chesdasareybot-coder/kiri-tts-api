@@ -28,6 +28,17 @@ ACCOUNTS_FILE = os.path.join(BASE_DIR, "accounts.txt")
 SONJJ_API_KEY = "b8426cc102f52ba88adb3bf2bb719a9165f69c15edee16043b0cd0e8b61ae7ec"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Docker-optimized Chromium flags
+CHROMIUM_ARGS = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--no-first-run",
+    "--no-zygote",
+    "--disable-extensions",
+]
+
 # Initialize FastAPI App
 app = FastAPI(
     title="Kiri TTS Khmer Voice REST API",
@@ -102,7 +113,7 @@ async def register_account():
     password = "KiriPass" + ''.join(random.choices(string.digits, k=4)) + "!"
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=True, args=CHROMIUM_ARGS)
         page = await browser.new_page()
         await page.goto("https://www.kiritts.com/auth/register", wait_until="networkidle")
         await page.fill('#email', email)
@@ -131,7 +142,7 @@ async def register_account():
 # --- Core Speech Synthesizer ---
 async def synthesize_speech(text: str, account: dict):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(headless=True, args=CHROMIUM_ARGS)
         context = await browser.new_context()
         page = await context.new_page()
 
@@ -246,7 +257,7 @@ async def generate_tts(req: TTSRequest):
         raise HTTPException(status_code=400, detail="Text parameter cannot be empty.")
 
     accounts = load_accounts()
-    current_acc = accounts[0]  # Default to primary active account
+    current_acc = accounts[0]
 
     try:
         data = await synthesize_speech(req.text, current_acc)
