@@ -25,3 +25,5 @@ kiri_stealth_outputs/
 Thumbs.db
 node_modules/
 electron-app/node_modules/
+electron-app/dist/
+*.exe

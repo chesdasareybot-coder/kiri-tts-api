@@ -4,6 +4,15 @@ const fs = require('fs');
 const http = require('http');
 const { spawn } = require('child_process');
 
+// Prevent Chromium cache lock and GPU cache conflicts on Windows
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+
+// Single instance lock to prevent multiple Electron processes fighting over cache
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
 let mainWindow;
 let pythonProcess = null;
 
